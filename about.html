@@ -188,6 +188,10 @@
       entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
     }, { threshold: 0.08 });
     document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+  <!-- 管理员入口（点击右下角隐藏链接进入登录页） -->
+<a href="admin.html" style="position:fixed;bottom:12px;right:12px;width:10px;height:10px;opacity:0;z-index:50" title="管理员"></a>
+<script src="editor.js"></script>
+
   </script>
 </body>
 </html>
