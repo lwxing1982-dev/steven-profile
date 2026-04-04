@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>相册 · 我的小站</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .gallery-page-header {
+      padding: 120px 52px 64px;
+      max-width: 1160px;
+      margin: 0 auto;
+    }
+
+    .gallery-page-header .section-label { text-align: left; }
+
+    .gallery-page-header h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(2.4rem, 5vw, 4rem);
+      font-weight: 400;
+      color: var(--text);
+      margin-top: 12px;
+      line-height: 1.15;
+    }
+
+    .gallery-page-header p {
+      color: var(--text-muted);
+      margin-top: 20px;
+      max-width: 480px;
+      line-height: 1.9;
+    }
+
+    /* 占位图（真实使用时替换为 <img> 标签） */
+    .photo-placeholder {
+      width: 100%;
+      background: var(--bg-warm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--border);
+      font-size: 2rem;
+      position: relative;
+    }
+
+    /* 用伪类控制不同高度，制造瀑布流节奏感 */
+    .photo-placeholder.tall  { aspect-ratio: 2/3; }
+    .photo-placeholder.sq    { aspect-ratio: 1/1; }
+    .photo-placeholder.wide  { aspect-ratio: 4/3; }
+    .photo-placeholder.port  { aspect-ratio: 3/4; }
+
+    .gallery-count {
+      font-size: .8rem;
+      letter-spacing: .1em;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    @media (max-width: 768px) {
+      .gallery-page-header { padding: 100px 28px 48px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 导航 -->
+  <nav>
+    <a class="nav-logo" href="index.html">我的小站</a>
+    <ul class="nav-links">
+      <li><a href="gallery.html" class="active">相册</a></li>
+      <li><a href="writings.html">随笔</a></li>
+      <li><a href="about.html">关于</a></li>
+    </ul>
+  </nav>
+
+  <div class="page-content">
+
+    <!-- 页面标题 -->
+    <div class="gallery-page-header fade-in">
+      <p class="section-label">图集</p>
+      <h1>用光影<br>记录日子</h1>
+      <p>每一张照片背后都有一个此刻，喜欢它的光线，或者只是不想忘记那天的天气。</p>
+      <p class="gallery-count" style="margin-top:12px">共 12 张 · 持续更新中</p>
+    </div>
+
+    <!-- 筛选按钮 -->
+    <div class="section" style="padding-top:0; padding-bottom:0">
+      <div class="gallery-filters fade-in">
+        <button class="filter-btn active" data-filter="all">全部</button>
+        <button class="filter-btn" data-filter="travel">旅行</button>
+        <button class="filter-btn" data-filter="daily">日常</button>
+        <button class="filter-btn" data-filter="nature">自然</button>
+      </div>
+    </div>
+
+    <!-- 瀑布流图集 -->
+    <div class="section" style="padding-top:40px">
+      <div class="gallery-grid">
+
+        <!-- 使用占位符，替换时把 .photo-placeholder div 换成 <img src="your-photo.jpg"> 即可 -->
+
+        <div class="gallery-item fade-in" data-category="travel">
+          <div class="photo-placeholder tall">🏔</div>
+          <div class="gallery-item-overlay">
+            <div class="gallery-item-title">山的那边</div>
+            <div class="gallery-item-date">2024 · 旅行</div>
+          </div>
+        </div>
+
+        <div class="gallery-item fade-in" data-category="daily">
+          <div class="photo-placeholder sq">☕</div>
+          <div class="gallery-item-overlay">
+            <div class="gallery-item-title">一个普通的早晨</div>
+            <div class="gallery-item-date">2024 · 日常</div>
+          </div>
+        </div>
+
+        <div class="gallery-item fade-in" data-category="nature">
+          <div class="photo-placeholder wide">🌿</div>
+          <div class="gallery-item-overlay">
+            <div class="gallery-item-title">绿意</div>
+            <div class="gallery-item-date">2024 · 自然</div>
+          </div>
+        </div>
+
+        <div class="gallery-item fade-in" data-category="travel">
+          <div class="photo-placeholder port">🌅</div>
+          <div class="gallery-item-overlay">
+            <div class="gallery-item-title">黄昏的海岸</div>
+            <div class="gallery-item-date">2024 · 旅行</div>
+          </div>
+        </div>
+
+        <div class="gallery-item fade-in" data-category="nature">
+          <div class="photo-placeholder tall">🍂</div>
+          <div class="gallery-item-overlay">
+            <div class="gallery-item-title">秋天来了</div>
+            <div class="gallery-item-date">2024 · 自然</div>
+          </div>
+        </div>
+
+        <div class="gallery-item fade-in" data-category="daily">
+          <div class="photo-placeholder sq">📚</div>
+          <div class="gallery-item-overlay">
+            <div class="gallery-item-title">读书的下午</div>
+            <div class="gallery-item-date">2024 · 日常</div>
+          </div>
+        </div>
+
+        <div class="gallery-item fade-in" data-category="travel">
+          <div class="photo-placeholder wide">🏛</div>
+          <div class="gallery-item-overlay">
+            <div class="gallery-item-title">古城的街道</div>
+            <div class="gallery-item-date">2024 · 旅行</div>
+          </div>
+        </div>
+
+        <div class="gallery-item fade-in" data-category="daily">
+          <div class="photo-placeholder port">🕯</div>
+          <div class="gallery-item-overlay">
+            <div class="gallery-item-title">夜里的光</div>
+            <div class="gallery-item-date">2024 · 日常</div>
+          </div>
+        </div>
+
+        <div class="gallery-item fade-in" data-category="nature">
+          <div class="photo-placeholder sq">🌸</div>
+          <div class="gallery-item-overlay">
+            <div class="gallery-item-title">春日</div>
+            <div class="gallery-item-date">2024 · 自然</div>
+          </div>
+        </div>
+
+        <div class="gallery-item fade-in" data-category="travel">
+          <div class="photo-placeholder tall">🚂</div>
+          <div class="gallery-item-overlay">
+            <div class="gallery-item-title">在路上</div>
+            <div class="gallery-item-date">2024 · 旅行</div>
+          </div>
+        </div>
+
+        <div class="gallery-item fade-in" data-category="daily">
+          <div class="photo-placeholder wide">🌧</div>
+          <div class="gallery-item-overlay">
+            <div class="gallery-item-title">雨天的窗</div>
+            <div class="gallery-item-date">2024 · 日常</div>
+          </div>
+        </div>
+
+        <div class="gallery-item fade-in" data-category="nature">
+          <div class="photo-placeholder port">🌊</div>
+          <div class="gallery-item-overlay">
+            <div class="gallery-item-title">海浪声</div>
+            <div class="gallery-item-date">2024 · 自然</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 灯箱 -->
+  <div class="lightbox" id="lightbox">
+    <button class="lightbox-close" id="lightbox-close">×</button>
+    <img src="" alt="" id="lightbox-img" />
+  </div>
+
+  <!-- 页脚 -->
+  <footer>
+    <span class="footer-copy">© 2025 我的小站 · 保留所有记忆</span>
+    <div class="footer-links">
+      <a href="gallery.html">相册</a>
+      <a href="writings.html">随笔</a>
+      <a href="about.html">关于</a>
+    </div>
+  </footer>
+
+  <script>
+    // 滚动淡入
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.08 });
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+    // 筛选
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const filter = btn.dataset.filter;
+        document.querySelectorAll('.gallery-item').forEach(item => {
+          const match = filter === 'all' || item.dataset.category === filter;
+          item.style.display = match ? '' : 'none';
+        });
+      });
+    });
+
+    // 灯箱（点击图片放大，placeholder 暂不支持，替换为真实 img 后生效）
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImg = document.getElementById('lightbox-img');
+
+    document.querySelectorAll('.gallery-item img').forEach(img => {
+      img.addEventListener('click', () => {
+        lightboxImg.src = img.src;
+        lightboxImg.alt = img.alt;
+        lightbox.classList.add('open');
+      });
+    });
+
+    document.getElementById('lightbox-close').addEventListener('click', () => {
+      lightbox.classList.remove('open');
+    });
+
+    lightbox.addEventListener('click', e => {
+      if(e.target === lightbox) lightbox.classList.remove('open');
+    });
+  </script>
+</body>
+</html>

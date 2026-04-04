@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>随笔 · 我的小站</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .writings-page-header {
+      padding: 120px 52px 64px;
+      max-width: 1160px;
+      margin: 0 auto;
+    }
+
+    .writings-page-header h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(2.4rem, 5vw, 4rem);
+      font-weight: 400;
+      color: var(--text);
+      margin-top: 12px;
+      line-height: 1.15;
+    }
+
+    .writings-page-header p {
+      color: var(--text-muted);
+      margin-top: 20px;
+      max-width: 480px;
+      line-height: 1.9;
+    }
+
+    /* 文章正文弹出层 */
+    .article-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: var(--bg);
+      overflow-y: auto;
+      padding: 80px 24px 80px;
+    }
+
+    .article-modal.open { display: block; }
+
+    .article-modal-inner {
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    .article-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: .8rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 52px;
+      cursor: pointer;
+      border: none;
+      background: none;
+      font-family: var(--font-body);
+      transition: color .2s;
+    }
+
+    .article-back:hover { color: var(--accent); }
+
+    .article-modal h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.8rem, 4vw, 3rem);
+      font-weight: 400;
+      line-height: 1.2;
+      color: var(--text);
+      margin-bottom: 20px;
+    }
+
+    .article-modal .article-meta {
+      font-size: .8rem;
+      letter-spacing: .1em;
+      color: var(--text-muted);
+      padding-bottom: 36px;
+      margin-bottom: 48px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .article-modal p {
+      color: var(--text);
+      margin-bottom: 1.6em;
+      line-height: 2;
+      text-indent: 2em;
+    }
+
+    .article-modal p:first-of-type { text-indent: 0; }
+
+    .article-modal blockquote {
+      border-left: 2px solid var(--accent-lt);
+      padding: 12px 0 12px 28px;
+      margin: 40px 0;
+      font-style: italic;
+      color: var(--text-muted);
+      font-family: var(--font-serif);
+      font-size: 1.15rem;
+      line-height: 1.8;
+    }
+
+    @media (max-width: 768px) {
+      .writings-page-header { padding: 100px 28px 48px; }
+      .writings-list { padding: 0 28px 80px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 导航 -->
+  <nav>
+    <a class="nav-logo" href="index.html">我的小站</a>
+    <ul class="nav-links">
+      <li><a href="gallery.html">相册</a></li>
+      <li><a href="writings.html" class="active">随笔</a></li>
+      <li><a href="about.html">关于</a></li>
+    </ul>
+  </nav>
+
+  <div class="page-content">
+
+    <!-- 页面标题 -->
+    <div class="writings-page-header fade-in">
+      <p class="section-label">随笔</p>
+      <h1>写给<br>自己的字</h1>
+      <p>不刻意整理，想到哪里写到哪里。有时候是感受，有时候是观察，偶尔是一点想不清楚的事情。</p>
+    </div>
+
+    <!-- 文章列表 -->
+    <div class="writings-list" style="padding: 0 52px 100px; max-width:1160px; margin:0 auto">
+
+      <div class="writing-item fade-in">
+        <div class="writing-meta">
+          <span class="writing-date">2024 年 11 月 18 日</span>
+          <span class="writing-tag">日常</span>
+        </div>
+        <h2 class="writing-title" onclick="openArticle('a1')">一个关于天气的早晨</h2>
+        <p class="writing-excerpt">
+          今天的云很低，低到像是随时会落下来压住整座城市的那种。我站在窗边喝咖啡，想着也许今天适合什么都不做，或者适合做一件平时一直推迟的事。
+        </p>
+        <a class="writing-read-more" onclick="openArticle('a1')" style="cursor:pointer">继续读 →</a>
+      </div>
+
+      <div class="writing-item fade-in">
+        <div class="writing-meta">
+          <span class="writing-date">2024 年 10 月 3 日</span>
+          <span class="writing-tag">感受</span>
+        </div>
+        <h2 class="writing-title" onclick="openArticle('a2')">关于"够了"这件事</h2>
+        <p class="writing-excerpt">
+          有段时间很害怕"够了"这个词，好像承认够了就等于认输，等于停止努力，等于放弃了某种可能性。后来才慢慢发现，"够了"其实是一种很难得的状态。
+        </p>
+        <a class="writing-read-more" onclick="openArticle('a2')" style="cursor:pointer">继续读 →</a>
+      </div>
+
+      <div class="writing-item fade-in">
+        <div class="writing-meta">
+          <span class="writing-date">2024 年 8 月 22 日</span>
+          <span class="writing-tag">旅途</span>
+        </div>
+        <h2 class="writing-title" onclick="openArticle('a3')">火车上的三个小时</h2>
+        <p class="writing-excerpt">
+          坐在靠窗的位置，窗外的风景以一种刚好的速度流过。不快，不慢。快了就什么都看不清，慢了又太像日常。也许旅行最好的部分就是这种"中速"——你在移动，但暂时不需要抵达。
+        </p>
+        <a class="writing-read-more" onclick="openArticle('a3')" style="cursor:pointer">继续读 →</a>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- 文章弹出层 -->
+  <div class="article-modal" id="article-modal">
+    <div class="article-modal-inner">
+      <button class="article-back" onclick="closeArticle()">← 返回随笔</button>
+      <h1 id="modal-title"></h1>
+      <div class="article-meta" id="modal-meta"></div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- 页脚 -->
+  <footer>
+    <span class="footer-copy">© 2025 我的小站 · 保留所有记忆</span>
+    <div class="footer-links">
+      <a href="gallery.html">相册</a>
+      <a href="writings.html">随笔</a>
+      <a href="about.html">关于</a>
+    </div>
+  </footer>
+
+  <script>
+    // 滚动淡入
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.08 });
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+    // 文章数据
+    const articles = {
+      a1: {
+        title: '一个关于天气的早晨',
+        meta: '2024 年 11 月 18 日 · 日常',
+        body: `
+          <p>今天的云很低，低到像是随时会落下来压住整座城市的那种。我站在窗边喝咖啡，想着也许今天适合什么都不做，或者适合做一件平时一直推迟的事。</p>
+          <p>最终选了后者。把书桌整理了一遍，扔掉了几张写了字又划掉的纸，找到了一支很久没用过的笔，试了一下还能写字，有点高兴。</p>
+          <blockquote>"好天气让人想出门，坏天气让人能做事。"</blockquote>
+          <p>以前觉得这只是个段子，现在慢慢觉得确实如此。不是因为坏天气让人沮丧，而是它自然地关上了"要不要去哪里"这个问题，把选项简化成了一个：待在这里，做点什么。</p>
+          <p>下午云散了一些，透出来几道光，照在窗台的花盆上。我想起来还没有给它们浇水，就去浇了。这一天就这样过去了，好像也没什么，但感觉还不错。</p>
+        `
+      },
+      a2: {
+        title: '关于"够了"这件事',
+        meta: '2024 年 10 月 3 日 · 感受',
+        body: `
+          <p>有段时间很害怕"够了"这个词，好像承认够了就等于认输，等于停止努力，等于放弃了某种可能性。</p>
+          <p>后来才慢慢发现，"够了"其实是一种很难得的状态。它不是消极的，也不是懒惰的，它更像是一种准确的感知：我知道自己现在在哪里，知道自己有什么，知道这些已经可以支撑我做想做的事。</p>
+          <blockquote>"够了不是终点，是一种清醒的出发点。"</blockquote>
+          <p>一直处于"不够"的状态里，其实很消耗人。总觉得再多一点才行，再好一点才行，但那个"再多一点"的终点永远在前面移动，永远够不到。</p>
+          <p>所以我现在练习一件事：偶尔停下来，认真想一想，现在其实够了。不是所有事都够，但足够开始，足够继续，足够好好过今天。</p>
+        `
+      },
+      a3: {
+        title: '火车上的三个小时',
+        meta: '2024 年 8 月 22 日 · 旅途',
+        body: `
+          <p>坐在靠窗的位置，窗外的风景以一种刚好的速度流过。不快，不慢。快了就什么都看不清，慢了又太像日常。</p>
+          <p>也许旅行最好的部分就是这种"中速"——你在移动，但暂时不需要抵达。没有人找你，没有事情等着你，手机信号时有时无，正好给了一个理由不用回消息。</p>
+          <p>坐了一会儿，拿出本子想写东西，结果只是对着窗外发呆。后来也不强迫自己了，就这样发呆，感觉也挺好。</p>
+          <blockquote>"有时候，'什么都没做'也是一种做了很多。"</blockquote>
+          <p>三个小时很快就过去了。到站的时候有点遗憾，想着要是再多一个小时就好了。然后想，如果一开始就是四个小时，到站的时候大概还是会这么想。</p>
+          <p>这大概就是旅途中那段时间特别的原因——它是有边界的，所以你会珍惜它，不会觉得理所当然。</p>
+        `
+      }
+    };
+
+    function openArticle(id) {
+      const a = articles[id];
+      document.getElementById('modal-title').textContent = a.title;
+      document.getElementById('modal-meta').textContent = a.meta;
+      document.getElementById('modal-body').innerHTML = a.body;
+      const modal = document.getElementById('article-modal');
+      modal.classList.add('open');
+      modal.scrollTop = 0;
+      window.scrollTo(0, 0);
+    }
+
+    function closeArticle() {
+      document.getElementById('article-modal').classList.remove('open');
+    }
+  </script>
+</body>
+</html>

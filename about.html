@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>关于我 · 我的小站</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .about-section {
+      padding: 120px 52px 100px;
+      max-width: 1060px;
+      margin: 0 auto;
+    }
+
+    .about-top-label {
+      font-size: .75rem;
+      letter-spacing: .25em;
+      text-transform: uppercase;
+      color: var(--accent-lt);
+      margin-bottom: 60px;
+    }
+
+    /* 下方附言区 */
+    .about-postscript {
+      max-width: 1060px;
+      margin: 0 auto;
+      padding: 0 52px 100px;
+    }
+
+    .about-postscript-inner {
+      border-top: 1px solid var(--border);
+      padding-top: 64px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 52px;
+    }
+
+    .about-ps-block h3 {
+      font-family: var(--font-serif);
+      font-size: 1.15rem;
+      font-weight: 400;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+
+    .about-ps-block p,
+    .about-ps-block ul {
+      font-size: .9rem;
+      color: var(--text-muted);
+      line-height: 2;
+    }
+
+    .about-ps-block ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .about-ps-block ul li::before {
+      content: '—  ';
+      color: var(--accent-lt);
+    }
+
+    @media (max-width: 900px) {
+      .about-section { padding: 100px 28px 72px; }
+      .about-postscript { padding: 0 28px 80px; }
+      .about-postscript-inner { grid-template-columns: 1fr; gap: 40px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 导航 -->
+  <nav>
+    <a class="nav-logo" href="index.html">我的小站</a>
+    <ul class="nav-links">
+      <li><a href="gallery.html">相册</a></li>
+      <li><a href="writings.html">随笔</a></li>
+      <li><a href="about.html" class="active">关于</a></li>
+    </ul>
+  </nav>
+
+  <div class="page-content">
+
+    <!-- 主内容 -->
+    <div class="about-section fade-in">
+      <p class="about-top-label">关于我</p>
+
+      <div class="about-grid">
+
+        <!-- 照片 -->
+        <div class="about-photo-wrap">
+          <!--
+            替换说明：
+            将下方 <div class="about-photo-placeholder"> 整块替换为：
+            <img src="images/avatar.jpg" alt="我的照片" class="about-photo">
+          -->
+          <div class="about-photo-placeholder">🙂</div>
+        </div>
+
+        <!-- 文字 -->
+        <div class="about-text">
+          <h2>你好，<br>我是 Steven。</h2>
+          <p class="about-subtitle">摄影 · 写字 · 记录生活</p>
+
+          <p>
+            这个小站是我放东西的地方——一些拍下来觉得好看的照片，一些写下来不知道发哪里的文字。
+            没有特别的主题，就是想留下点什么。
+          </p>
+
+          <p>
+            平时喜欢到处走走，不一定是远行，楼下的公园也算。
+            喜欢观察陌生人，喜欢好天气，喜欢一杯刚刚好的咖啡。
+          </p>
+
+          <div class="about-rule"></div>
+
+          <div class="about-detail">
+            <div class="about-detail-item">
+              <span class="about-detail-label">所在</span>
+              <span class="about-detail-value">中国 · 某个城市</span>
+            </div>
+            <div class="about-detail-item">
+              <span class="about-detail-label">相机</span>
+              <span class="about-detail-value">用手机拍，也用胶片</span>
+            </div>
+            <div class="about-detail-item">
+              <span class="about-detail-label">联系</span>
+              <span class="about-detail-value">
+                <!-- 替换成你的邮箱 -->
+                <a href="mailto:hello@example.com">hello@example.com</a>
+              </span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 附言三栏 -->
+    <div class="about-postscript fade-in">
+      <div class="about-postscript-inner">
+
+        <div class="about-ps-block">
+          <h3>喜欢的事</h3>
+          <ul>
+            <li>在雨天读书</li>
+            <li>拍光线刚好的照片</li>
+            <li>在陌生城市的街道发呆</li>
+            <li>找一家安静的咖啡馆坐很久</li>
+            <li>听正好符合心情的歌</li>
+          </ul>
+        </div>
+
+        <div class="about-ps-block">
+          <h3>这个网站</h3>
+          <p>
+            这里没有广告，没有统计代码，没有要关注的东西。
+            就是一个放照片和文字的地方，想留下来就留下来，不感兴趣就关掉，都好。
+          </p>
+        </div>
+
+        <div class="about-ps-block">
+          <h3>一点题外话</h3>
+          <p>
+            我不常更新，但每次发东西都是认真想发的。
+            如果你读到了某篇文字，或者某张照片让你停留了一会儿，
+            那挺好的。
+          </p>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 页脚 -->
+  <footer>
+    <span class="footer-copy">© 2025 我的小站 · 保留所有记忆</span>
+    <div class="footer-links">
+      <a href="gallery.html">相册</a>
+      <a href="writings.html">随笔</a>
+      <a href="about.html">关于</a>
+    </div>
+  </footer>
+
+  <script>
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.08 });
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+  </script>
+</body>
+</html>
