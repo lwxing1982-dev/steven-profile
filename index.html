@@ -8,9 +8,42 @@
   <style>
     /* 首页专属：隐藏导航，使用封面全屏 */
     body.home nav { background: transparent; border-bottom: none; }
-    body.home nav .nav-logo { color: var(--text); }
-    body.home nav .nav-links a { color: var(--text-muted); }
+    body.home nav .nav-logo { color: #f5f0e8; }
+    body.home nav .nav-links a { color: rgba(245,240,232,.8); }
     body.home .page-content { padding-top: 0; }
+
+    /* Hero 背景图 */
+    .hero {
+      position: relative;
+      background-image: url('https://images.unsplash.com/photo-1774268184985-f1af67b38179?auto=format&fit=crop&w=1920&q=80');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+    }
+    /* 深色蒙版，让文字清晰可读 */
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        to bottom,
+        rgba(20,20,20,.45) 0%,
+        rgba(20,20,20,.30) 60%,
+        rgba(20,20,20,.55) 100%
+      );
+      z-index: 0;
+    }
+    /* Hero 内容层级提升，覆盖蒙版 */
+    .hero > * { position: relative; z-index: 1; }
+    /* 文字在图片背景上用白色系 */
+    .hero .hero-eyebrow { color: rgba(245,240,232,.75); }
+    .hero .hero-title { color: #f5f0e8; }
+    .hero .hero-title em { color: rgba(245,240,232,.85); }
+    .hero .hero-divider { background: rgba(245,240,232,.4); }
+    .hero .hero-subtitle { color: rgba(245,240,232,.8); }
+    .hero .hero-nav a { color: rgba(245,240,232,.75); border-color: rgba(245,240,232,.3); }
+    .hero .hero-nav a:hover { color: #f5f0e8; border-color: rgba(245,240,232,.7); }
+    .hero .hero-scroll { color: rgba(245,240,232,.5); }
 
     /* 首页引语区 */
     .home-quote {
@@ -18,7 +51,6 @@
       padding: 100px 52px;
       text-align: center;
     }
-
     .home-quote blockquote {
       font-family: var(--font-serif);
       font-size: clamp(1.3rem, 3vw, 2rem);
@@ -29,7 +61,6 @@
       margin: 0 auto;
       line-height: 1.7;
     }
-
     .home-quote cite {
       display: block;
       margin-top: 24px;
@@ -49,7 +80,6 @@
       border-top: 1px solid var(--border);
       border-bottom: 1px solid var(--border);
     }
-
     .home-card {
       padding: 64px 48px;
       border-right: 1px solid var(--border);
@@ -59,45 +89,19 @@
       flex-direction: column;
       gap: 16px;
     }
-
     .home-card:last-child { border-right: none; }
     .home-card:hover { background: var(--bg-warm); opacity: 1; }
-
-    .home-card-num {
-      font-family: var(--font-mono);
-      font-size: .72rem;
-      color: var(--accent-lt);
-      letter-spacing: .15em;
-    }
-
-    .home-card-title {
-      font-family: var(--font-serif);
-      font-size: 1.6rem;
-      font-weight: 400;
-      color: var(--text);
-      line-height: 1.3;
-    }
-
-    .home-card-desc {
-      font-size: .88rem;
-      color: var(--text-muted);
-      line-height: 1.8;
-      margin-top: 4px;
-    }
-
-    .home-card-arrow {
-      margin-top: auto;
-      font-size: .78rem;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      color: var(--accent);
-    }
+    .home-card-num { font-family: var(--font-mono); font-size: .72rem; color: var(--accent-lt); letter-spacing: .15em; }
+    .home-card-title { font-family: var(--font-serif); font-size: 1.6rem; font-weight: 400; color: var(--text); line-height: 1.3; }
+    .home-card-desc { font-size: .88rem; color: var(--text-muted); line-height: 1.8; margin-top: 4px; }
+    .home-card-arrow { margin-top: auto; font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
 
     @media (max-width: 768px) {
       .home-cards { grid-template-columns: 1fr; }
       .home-card { border-right: none; border-bottom: 1px solid var(--border); }
       .home-card:last-child { border-bottom: none; }
       .home-quote { padding: 72px 28px; }
+      .hero { background-attachment: scroll; }
     }
   </style>
 </head>
@@ -180,10 +184,9 @@
       entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
     }, { threshold: 0.12 });
     document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
-
   </script>
-<!-- 管理员入口 -->
-<a href="admin.html" style="position:fixed;bottom:12px;right:12px;width:10px;height:10px;opacity:0;z-index:50" title="管理员"></a>
-<script src="editor.js"></script>
+  <!-- 管理员入口 -->
+  <a href="admin.html" style="position:fixed;bottom:12px;right:12px;width:10px;height:10px;opacity:0;z-index:50" title="管理员"></a>
+  <script src="editor.js"></script>
 </body>
 </html>
