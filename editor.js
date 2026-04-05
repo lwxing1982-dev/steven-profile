@@ -1,640 +1,333 @@
 /**
- * editor.js — 网站内容编辑器
- * 登录验证 + 可视化编辑（文字 & 图片），内容存储于 localStorage
+ * editor.js v2 — 网站内容编辑器
+ * 功能：登录验证·文字内联编辑·图片上传·Unsplash 图片搜索
  */
-
-(function() {
+(function () {
   'use strict';
+  var PAGE_KEY = 'page_' + location.pathname.replace(/[^a-z]/gi, '_');
+  var UNSPLASH_API = 'https://api.unsplash.com/search/photos';
+  function isIn() { return sessionStorage.getItem('sok') === '1'; }
+  function load() { try { return JSON.parse(localStorage.getItem(PAGE_KEY)) || {}; } catch (e) { return {}; } }
+  function save(d) { localStorage.setItem(PAGE_KEY, JSON.stringify(d)); }
+  function getKey() { return localStorage.getItem('ukey') || ''; }
 
-  // ── 1. 工具函数 ──────────────────────────────────────────
-  var PAGE_KEY = 'site_page_' + location.pathname.replace(/\//g, '_');
-
-  function isLoggedIn() {
-    return sessionStorage.getItem('site_logged_in') === '1';
-  }
-
-  function savePageData(data) {
-    localStorage.setItem(PAGE_KEY, JSON.stringify(data));
-  }
-
-  function loadPageData() {
-    try { return JSON.parse(localStorage.getItem(PAGE_KEY)) || {}; }
-    catch(e) { return {}; }
-  }
-
-  // ── 2. 内容恢复（无论是否登录都执行）──────────────────────
-  function restoreContent() {
-    var data = loadPageData();
-    Object.keys(data).forEach(function(id) {
+  /* 内容恢复 */
+  function restore() {
+    var d = load();
+    Object.keys(d).forEach(function (id) {
+      if (id === '__gallery' || id === '__writings') return;
       var el = document.getElementById(id);
       if (!el) return;
-      var val = data[id];
-      if (el.tagName === 'IMG') {
-        el.src = val;
-      } else {
-        el.innerHTML = val;
-      }
+      if (el.tagName === 'IMG') el.src = d[id]; else el.innerHTML = d[id];
     });
-    // 恢复相册图片
-    if (data.__gallery) {
-      try {
-        var items = JSON.parse(data.__gallery);
-        renderGallery(items);
-      } catch(e) {}
-    }
-    // 恢复随笔
-    if (data.__writings) {
-      try {
-        var writings = JSON.parse(data.__writings);
-        renderWritings(writings);
-      } catch(e) {}
-    }
+    if (d.__gallery) renderGallery(JSON.parse(d.__gallery));
+    if (d.__writings) renderWritings(JSON.parse(d.__writings));
   }
 
-  // ── 3. 相册渲染 ───────────────────────────────────────────
+  /* 相册 */
+  var _gallery = [];
   function renderGallery(items) {
+    _gallery = items || [];
     var grid = document.querySelector('.gallery-grid');
     if (!grid) return;
     grid.innerHTML = '';
-    items.forEach(function(item, idx) {
+    _gallery.forEach(function (item, i) {
       var div = document.createElement('div');
       div.className = 'gallery-item fade-in visible';
-      div.dataset.category = item.category || 'daily';
-      div.dataset.gidx = idx;
+      div.dataset.category = item.cat || 'daily';
+      div.dataset.idx = i;
       if (item.src) {
-        div.innerHTML =
-          '<img src="' + item.src + '" style="width:100%;display:block;object-fit:cover;aspect-ratio:' + (item.ratio||'1/1') + '">' +
-          '<div class="gallery-item-overlay">' +
-          '<div class="gallery-item-title" id="gtitle_' + idx + '">' + (item.title||'') + '</div>' +
-          '<div class="gallery-item-date" id="gdate_' + idx + '">' + (item.date||'') + '</div>' +
-          '</div>';
+        div.innerHTML = '<img src="' + item.src + '" alt="' + (item.title || '') + '" loading="lazy">' +
+          '<div class="gallery-item-overlay"><div class="gallery-item-title">' + (item.title || '') + '</div>' +
+          '<div class="gallery-item-date">' + (item.date || '') + '</div></div>';
+      } else {
+        div.innerHTML = '<div class="photo-placeholder sq">' + (item.emoji || '🖼') + '</div>';
       }
+      div.addEventListener('click', function (e) { if (!e.target.closest('.edit-controls') && item.src) openLightbox(item.src); });
       grid.appendChild(div);
+    });
+    var cnt = document.querySelector('.gallery-count');
+    if (cnt) cnt.textContent = '共 ' + _gallery.length + ' 张 · 持续更新中';
+    if (isIn()) addGalleryControls();
+    bindFilters();
+  }
+
+  function addGalleryControls() {
+    document.querySelectorAll('.gallery-item').forEach(function (item) {
+      var i = parseInt(item.dataset.idx, 10);
+      var c = document.createElement('div');
+      c.className = 'edit-controls';
+      c.innerHTML = '<button onclick="window.SE.editPhoto(' + i + ')">✏️</button><button onclick="window.SE.delPhoto(' + i + ')" style="color:#e07070">🗑</button>';
+      item.appendChild(c);
     });
   }
 
-  // ── 4. 随笔渲染 ───────────────────────────────────────────
-  function renderWritings(writings) {
+  function bindFilters() {
+    document.querySelectorAll('.filter-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        document.querySelectorAll('.filter-btn').forEach(function (b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        var f = btn.dataset.filter;
+        document.querySelectorAll('.gallery-item').forEach(function (item) {
+          item.style.display = (f === 'all' || item.dataset.category === f) ? '' : 'none';
+        });
+      });
+    });
+  }
+
+  function openLightbox(src) {
+    var lb = document.getElementById('lightbox'); var li = document.getElementById('lightbox-img');
+    if (!lb || !li) return;
+    li.src = src; lb.classList.add('open');
+  }
+
+  /* 随笔 */
+  var _writings = [];
+  function renderWritings(items) {
+    _writings = items || [];
     var list = document.querySelector('.writings-list');
     if (!list) return;
     list.innerHTML = '';
-    writings.forEach(function(w, idx) {
+    _writings.forEach(function (w, i) {
       var div = document.createElement('div');
       div.className = 'writing-item fade-in visible';
       div.innerHTML =
-        '<div class="writing-meta">' +
-        '<span class="writing-date" id="wdate_' + idx + '">' + (w.date||'') + '</span>' +
-        '<span class="writing-tag" id="wtag_' + idx + '">' + (w.tag||'') + '</span>' +
-        '</div>' +
-        '<h2 class="writing-title" id="wtitle_' + idx + '">' + (w.title||'') + '</h2>' +
-        '<p class="writing-excerpt" id="wexcerpt_' + idx + '">' + (w.excerpt||'') + '</p>' +
-        '<div class="writing-body" id="wbody_' + idx + '" style="display:none">' + (w.body||'') + '</div>';
+        '<div class="writing-meta"><span class="writing-date">' + (w.date || '') + '</span><span class="writing-tag">' + (w.tag || '') + '</span></div>' +
+        '<h2 class="writing-title">' + (w.title || '') + '</h2>' +
+        '<p class="writing-excerpt">' + (w.excerpt || '') + '</p>' +
+        (w.body ? '<a class="writing-read-more" onclick="window.SE.openArticle(' + i + ')">继续读 →</a>' : '');
       list.appendChild(div);
     });
+    if (isIn()) {
+      document.querySelectorAll('.writing-item').forEach(function (item, i) {
+        var c = document.createElement('div');
+        c.className = 'edit-controls'; c.style.marginTop = '12px';
+        c.innerHTML = '<button onclick="window.SE.editWriting(' + i + ')">✏️ 编辑</button><button onclick="window.SE.delWriting(' + i + ')" style="color:#e07070">🗑 删除</button>';
+        item.appendChild(c);
+      });
+    }
   }
 
-  // ── 5. 编辑器 UI ──────────────────────────────────────────
-  function injectEditorBar() {
-    // 顶部编辑工具栏
-    var bar = document.createElement('div');
-    bar.id = 'editor-bar';
-    bar.innerHTML = `
-      <div id="editor-bar-inner">
-        <span id="editor-bar-title">✏️ 编辑模式</span>
-        <div id="editor-bar-actions">
-          <button onclick="window.__editor.saveAll()" class="ebar-btn ebar-save">💾 保存</button>
-          <button onclick="window.__editor.addGalleryItem()" class="ebar-btn" id="btn-add-photo" style="display:none">＋ 添加图片</button>
-          <button onclick="window.__editor.addWriting()" class="ebar-btn" id="btn-add-writing" style="display:none">＋ 添加随笔</button>
-          <a href="admin.html" class="ebar-btn ebar-exit">退出编辑</a>
-        </div>
-      </div>
-    `;
+  function openArticle(idx) {
+    var w = _writings[idx]; if (!w) return;
+    var modal = document.getElementById('article-modal'); if (!modal) return;
+    document.getElementById('modal-title').textContent = w.title || '';
+    document.getElementById('modal-meta').textContent = (w.date || '') + (w.tag ? ' · ' + w.tag : '');
+    document.getElementById('modal-body').innerHTML = w.body || '';
+    modal.classList.add('open'); window.scrollTo(0, 0);
+  }
+
+  /* 编辑工具栏 */
+  function injectBar() {
+    var bar = document.createElement('div'); bar.id = 'ed-bar';
+    var isG = !!document.querySelector('.gallery-grid');
+    var isW = !!document.querySelector('.writings-list');
+    bar.innerHTML = '<span id="ed-label">✏️ 编辑模式</span><div id="ed-actions">' +
+      '<button class="eb save" onclick="window.SE.saveAll()">💾 保存</button>' +
+      (isG ? '<button class="eb" onclick="window.SE.addPhoto()">＋ 添加图片</button><button class="eb" onclick="window.SE.unsplashSearch()">🔍 Unsplash</button>' : '') +
+      (isW ? '<button class="eb" onclick="window.SE.addWriting()">＋ 新增随笔</button>' : '') +
+      '<a class="eb exit" href="admin.html">退出编辑</a></div>';
     document.body.insertBefore(bar, document.body.firstChild);
-
-    // 编辑器样式
-    var style = document.createElement('style');
-    style.textContent = `
-      #editor-bar {
-        position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
-        background: #2c2418; color: #f5f0e8;
-        padding: 0 24px; height: 48px;
-        display: flex; align-items: center;
-        box-shadow: 0 2px 12px rgba(0,0,0,.25);
-      }
-      #editor-bar-inner {
-        display: flex; align-items: center;
-        justify-content: space-between; width: 100%;
-      }
-      #editor-bar-title { font-size:.85rem; letter-spacing:.1em; }
-      #editor-bar-actions { display:flex; gap:10px; align-items:center; }
-      .ebar-btn {
-        padding: 6px 14px; border-radius:2px; border:1px solid rgba(245,240,232,.25);
-        background:transparent; color:#f5f0e8; font-size:.78rem; cursor:pointer;
-        letter-spacing:.08em; text-decoration:none; font-family:inherit;
-        transition: background .2s;
-      }
-      .ebar-btn:hover { background: rgba(245,240,232,.15); }
-      .ebar-save { background: rgba(100,180,100,.25); border-color:rgba(100,180,100,.5); }
-      .ebar-exit { background: rgba(180,80,80,.2); border-color:rgba(180,80,80,.4); }
-      body { padding-top: 48px !important; }
-      nav { top: 48px !important; }
-      /* 可编辑元素高亮 */
-      [data-editable]:hover {
-        outline: 2px dashed rgba(180,140,80,.6);
-        outline-offset: 2px;
-        cursor: text;
-      }
-      [data-editable]:focus {
-        outline: 2px solid rgba(180,140,80,.9);
-        outline-offset: 2px;
-        background: rgba(255,250,235,.4);
-      }
-      /* 相册编辑覆盖 */
-      .gallery-item { position: relative; }
-      .gallery-edit-overlay {
-        position: absolute; top:6px; right:6px; z-index:10;
-        display:flex; gap:6px;
-      }
-      .gallery-edit-btn {
-        background: rgba(44,36,24,.8); color:#f5f0e8;
-        border:none; border-radius:2px; padding:4px 8px;
-        font-size:.72rem; cursor:pointer;
-      }
-      /* 随笔编辑按钮 */
-      .writing-edit-btn {
-        display:inline-block; margin-left:12px;
-        background:var(--bg-warm); border:1px solid var(--border);
-        border-radius:2px; padding:3px 10px; font-size:.75rem;
-        cursor:pointer; color:var(--text-muted);
-      }
-      /* 图片上传区 */
-      .img-upload-area {
-        width:100%; aspect-ratio:1/1;
-        border:2px dashed rgba(150,130,100,.4);
-        display:flex; flex-direction:column;
-        align-items:center; justify-content:center;
-        cursor:pointer; background:var(--bg-warm);
-        color:var(--text-muted); font-size:.85rem;
-        transition: border-color .2s;
-      }
-      .img-upload-area:hover { border-color:rgba(150,130,100,.8); }
-      /* 模态框 */
-      .editor-modal-bg {
-        display:none; position:fixed; inset:0; z-index:10000;
-        background: rgba(44,36,24,.7); align-items:center; justify-content:center;
-      }
-      .editor-modal-bg.open { display:flex; }
-      .editor-modal {
-        background:var(--bg-card); border:1px solid var(--border);
-        border-radius:4px; padding:40px; width:100%; max-width:520px;
-        max-height:85vh; overflow-y:auto;
-      }
-      .editor-modal h3 { font-family:var(--font-serif); font-size:1.3rem; font-weight:400; margin-bottom:24px; }
-      .editor-field { margin-bottom:18px; }
-      .editor-field label { display:block; font-size:.75rem; letter-spacing:.12em; text-transform:uppercase; color:var(--accent-lt); margin-bottom:6px; }
-      .editor-field input, .editor-field textarea, .editor-field select {
-        width:100%; padding:10px 14px; background:var(--bg);
-        border:1px solid var(--border); border-radius:2px;
-        font-family:var(--font-body); font-size:.9rem; color:var(--text); outline:none;
-      }
-      .editor-field textarea { min-height:100px; resize:vertical; }
-      .editor-field input:focus, .editor-field textarea:focus { border-color:var(--accent); }
-      .editor-modal-actions { display:flex; gap:12px; margin-top:24px; }
-      .em-btn {
-        flex:1; padding:10px; border-radius:2px; border:1px solid var(--border);
-        background:var(--text); color:var(--bg); font-family:var(--font-body);
-        font-size:.85rem; cursor:pointer;
-      }
-      .em-btn.cancel { background:var(--bg-warm); color:var(--text); }
-      .em-img-preview { width:100%; max-height:200px; object-fit:cover; margin-top:10px; border-radius:2px; display:none; }
-    `;
-    document.head.appendChild(style);
-
-    // 检测当前页面类型，显示对应按钮
-    if (document.querySelector('.gallery-grid')) {
-      document.getElementById('btn-add-photo').style.display = 'inline-block';
-    }
-    if (document.querySelector('.writings-list')) {
-      document.getElementById('btn-add-writing').style.display = 'inline-block';
-    }
+    var s = document.createElement('style');
+    s.textContent = '#ed-bar{position:fixed;top:0;left:0;right:0;z-index:9999;display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:46px;background:#2c2418;color:#f5f0e8;box-shadow:0 2px 12px rgba(0,0,0,.3);}#ed-label{font-size:.82rem;letter-spacing:.1em;}#ed-actions{display:flex;gap:8px;align-items:center;}.eb{padding:5px 13px;border-radius:2px;border:1px solid rgba(245,240,232,.25);background:transparent;color:#f5f0e8;font-size:.76rem;cursor:pointer;letter-spacing:.06em;text-decoration:none;font-family:inherit;transition:background .2s;}.eb:hover{background:rgba(245,240,232,.15);}.eb.save{background:rgba(80,160,80,.25);border-color:rgba(80,160,80,.5);}.eb.exit{background:rgba(160,80,80,.2);border-color:rgba(160,80,80,.4);}body{padding-top:46px!important;}nav{top:46px!important;}[data-ed]:hover{outline:2px dashed rgba(180,140,80,.6);outline-offset:2px;cursor:text;}[data-ed]:focus{outline:2px solid rgba(180,140,80,.9);background:rgba(255,250,230,.35);}.edit-controls{display:flex;gap:6px;margin-top:6px;}.edit-controls button{padding:3px 10px;background:rgba(44,36,24,.75);color:#f5f0e8;border:none;border-radius:2px;font-size:.7rem;cursor:pointer;}.em-bg{display:none;position:fixed;inset:0;z-index:10000;background:rgba(44,36,24,.65);align-items:center;justify-content:center;}.em-bg.open{display:flex;}.em-box{background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:36px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;}.em-box h3{font-family:var(--font-serif);font-size:1.3rem;font-weight:400;margin-bottom:20px;}.em-field{margin-bottom:16px;}.em-field label{display:block;font-size:.7rem;letter-spacing:.15em;text-transform:uppercase;color:var(--accent-lt);margin-bottom:5px;}.em-field input,.em-field textarea,.em-field select{width:100%;padding:9px 12px;background:var(--bg);border:1px solid var(--border);border-radius:2px;font-family:var(--font-body);font-size:.9rem;color:var(--text);outline:none;}.em-field textarea{min-height:90px;resize:vertical;}.em-actions{display:flex;gap:10px;margin-top:20px;}.em-btn{flex:1;padding:10px;border-radius:2px;border:1px solid var(--border);background:var(--text);color:var(--bg);font-family:var(--font-body);font-size:.85rem;cursor:pointer;}.em-btn.cancel{background:var(--bg-warm);color:var(--text);}.em-preview{width:100%;max-height:180px;object-fit:cover;border-radius:2px;margin-top:8px;display:none;border:1px solid var(--border);}.usp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px;max-height:300px;overflow-y:auto;}.usp-img{aspect-ratio:1/1;object-fit:cover;width:100%;cursor:pointer;border-radius:2px;border:2px solid transparent;transition:all .2s;}.usp-img:hover{border-color:var(--accent);}.usp-img.selected{border-color:var(--text);}.usp-hint{text-align:center;padding:16px;color:var(--text-muted);font-size:.83rem;}';
+    document.head.appendChild(s);
   }
 
-  function makeEditable(selector, id) {
-    var el = document.querySelector(selector) || document.getElementById(id);
-    if (!el) return;
-    el.setAttribute('contenteditable', 'true');
-    el.setAttribute('data-editable', '1');
+  function makeEditable(sel, id) {
+    var el = document.querySelector(sel); if (!el) return;
+    el.setAttribute('contenteditable', 'true'); el.setAttribute('data-ed', '1');
     if (!el.id) el.id = id;
   }
 
-  // ── 6. 编辑器主逻辑 ───────────────────────────────────────
-  var galleryItems = [];
-  var writingsData = [];
-
-  function initEditableFields() {
-    var page = location.pathname;
-
-    if (page.indexOf('index') !== -1 || page.endsWith('/') || page.endsWith('steven-profile/')) {
-      // 首页可编辑字段
-      makeEditable('.hero-eyebrow', 'edit-eyebrow');
-      makeEditable('.hero-title', 'edit-hero-title');
-      makeEditable('.hero-subtitle', 'edit-hero-subtitle');
-      makeEditable('.home-quote blockquote', 'edit-quote');
+  function initEditable() {
+    var p = location.pathname;
+    if (p.endsWith('/') || p.includes('index')) {
+      makeEditable('.hero-eyebrow', 'e_ey');
+      makeEditable('.hero-title', 'e_ht');
+      makeEditable('.hero-subtitle', 'e_hs');
+      makeEditable('.home-quote blockquote', 'e_hq');
     }
-
-    if (page.indexOf('about') !== -1) {
-      makeEditable('.about-text h2', 'edit-about-name');
-      makeEditable('.about-subtitle', 'edit-about-subtitle');
-      makeEditable('.about-ps-block:nth-child(1)', 'edit-ps1');
-      makeEditable('.about-ps-block:nth-child(2)', 'edit-ps2');
-      makeEditable('.about-ps-block:nth-child(3)', 'edit-ps3');
-      // 关于页个人信息
-      document.querySelectorAll('.about-text p').forEach(function(p, i) {
-        p.setAttribute('contenteditable', 'true');
-        p.setAttribute('data-editable', '1');
-        if (!p.id) p.id = 'edit-about-p' + i;
-      });
-      document.querySelectorAll('.about-detail-value').forEach(function(v, i) {
-        v.setAttribute('contenteditable', 'true');
-        v.setAttribute('data-editable', '1');
-        if (!v.id) v.id = 'edit-detail-v' + i;
-      });
+    if (p.includes('about')) {
+      makeEditable('.about-text h2', 'e_an');
+      makeEditable('.about-subtitle', 'e_as');
+      document.querySelectorAll('.about-text p').forEach(function (el, i) { el.setAttribute('contenteditable','true'); el.setAttribute('data-ed','1'); if(!el.id) el.id='e_ap'+i; });
+      document.querySelectorAll('.about-detail-value').forEach(function (el, i) { el.setAttribute('contenteditable','true'); el.setAttribute('data-ed','1'); if(!el.id) el.id='e_dv'+i; });
+      document.querySelectorAll('.about-ps-block').forEach(function (el, i) { el.setAttribute('contenteditable','true'); el.setAttribute('data-ed','1'); if(!el.id) el.id='e_ps'+i; });
     }
-
-    if (page.indexOf('gallery') !== -1) {
-      initGalleryEdit();
-    }
-
-    if (page.indexOf('writings') !== -1) {
-      initWritingsEdit();
-    }
+    if (p.includes('gallery')) { makeEditable('.gallery-page-header h1','e_gh'); }
+    if (p.includes('writings')) { makeEditable('.writings-page-header h1','e_wh'); }
   }
 
-  // ── 7. 相册编辑 ───────────────────────────────────────────
-  function loadGalleryItems() {
-    var data = loadPageData();
-    if (data.__gallery) {
-      try { galleryItems = JSON.parse(data.__gallery); } catch(e) { galleryItems = []; }
-    } else {
-      // 读取现有 DOM 中的图片/占位
-      var items = document.querySelectorAll('.gallery-item');
-      galleryItems = [];
-      items.forEach(function(item) {
-        var img = item.querySelector('img');
-        var title = item.querySelector('.gallery-item-title');
-        var date = item.querySelector('.gallery-item-date');
-        galleryItems.push({
-          src: img ? img.src : '',
-          title: title ? title.textContent : '',
-          date: date ? date.textContent : '',
-          category: item.dataset.category || 'daily',
-          ratio: '1/1'
-        });
-      });
-    }
+  /* 模态框 */
+  var _mb = null;
+  function showModal(html) {
+    closeModal();
+    var bg = document.createElement('div'); bg.className = 'em-bg open';
+    bg.innerHTML = '<div class="em-box">' + html + '</div>';
+    bg.addEventListener('click', function (e) { if (e.target === bg) closeModal(); });
+    document.body.appendChild(bg); _mb = bg;
   }
+  function closeModal() { if (_mb) { _mb.remove(); _mb = null; } }
 
-  function initGalleryEdit() {
-    loadGalleryItems();
-    renderGallery(galleryItems);
-    addGalleryEditButtons();
-  }
-
-  function addGalleryEditButtons() {
-    document.querySelectorAll('.gallery-item').forEach(function(item, idx) {
-      var ov = document.createElement('div');
-      ov.className = 'gallery-edit-overlay';
-      ov.innerHTML =
-        '<button class="gallery-edit-btn" onclick="window.__editor.editGalleryItem(' + idx + ')">✏️ 编辑</button>' +
-        '<button class="gallery-edit-btn" style="background:rgba(180,60,60,.8)" onclick="window.__editor.deleteGalleryItem(' + idx + ')">🗑 删除</button>';
-      item.appendChild(ov);
+  /* 图片上传 */
+  var _curSrc = '';
+  function bindUpload(fid, pid) {
+    var inp = document.getElementById(fid); if (!inp) return;
+    inp.addEventListener('change', function () {
+      var f = this.files[0]; if (!f) return;
+      var r = new FileReader();
+      r.onload = function (e) { _curSrc = e.target.result; var pv = document.getElementById(pid); if(pv){pv.src=e.target.result;pv.style.display='block';} };
+      r.readAsDataURL(f);
     });
   }
 
-  // ── 8. 随笔编辑 ───────────────────────────────────────────
+  /* Unsplash */
+  var _uspSel = '', _curPhotoIdx = -1;
+  function unsplashSearch() {
+    showModal('<h3>🔍 从 Unsplash 选取图片</h3>' +
+      '<div style="display:flex;gap:8px"><div class="em-field" style="flex:1;margin:0"><label>关键词（英文效果更好）</label><input type="text" id="uq" placeholder="nature, city, travel…"/></div>' +
+      '<button class="em-btn" style="margin-top:auto;flex:0 0 80px;padding:9px 0" onclick="window.SE._uSearch()">搜索</button></div>' +
+      '<p class="usp-hint" id="usp-hint">输入关键词后点击搜索</p><div class="usp-grid" id="usp-grid"></div>' +
+      '<div class="em-field" style="margin-top:12px"><label>或直接粘贴图片 URL</label><input type="text" id="eu-url" placeholder="https://…"/></div>' +
+      '<div class="em-field"><label>标题</label><input type="text" id="eu-title"/></div>' +
+      '<div class="em-field"><label>日期/说明</label><input type="text" id="eu-date" placeholder="2024 · 旅行"/></div>' +
+      '<div class="em-field"><label>分类</label><select id="eu-cat"><option value="travel">旅行</option><option value="daily">日常</option><option value="nature">自然</option></select></div>' +
+      '<div class="em-actions"><button class="em-btn cancel" onclick="window.SE.closeModal()">取消</button><button class="em-btn" onclick="window.SE._uConfirm()">添加到相册</button></div>');
+    _uspSel = '';
+  }
+
+  function _uSearch() {
+    var q = document.getElementById('uq').value.trim(); if (!q) return;
+    var key = getKey();
+    var grid = document.getElementById('usp-grid'); var hint = document.getElementById('usp-hint');
+    grid.innerHTML = ''; hint.textContent = '搜索中…'; _uspSel = '';
+    if (!key) {
+      hint.textContent = '未设置 API Key，显示随机图片（去管理中心设置 Key 开启搜索）：';
+      for (var i = 0; i < 9; i++) {
+        appendUImg(grid, 'https://source.unsplash.com/300x300/?' + encodeURIComponent(q) + '&sig=' + Date.now() + i, '', 'https://source.unsplash.com/800x600/?' + encodeURIComponent(q) + '&sig=' + Date.now() + i);
+      }
+      return;
+    }
+    fetch(UNSPLASH_API + '?query=' + encodeURIComponent(q) + '&per_page=12&client_id=' + key)
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        hint.textContent = data.results && data.results.length ? '' : '没有找到相关图片';
+        (data.results || []).forEach(function (p) { appendUImg(grid, p.urls.small, p.alt_description || '', p.urls.regular); });
+      })
+      .catch(function () { hint.textContent = 'API 请求失败，请检查 Key'; });
+  }
+
+  function appendUImg(grid, thumb, alt, full) {
+    var img = document.createElement('img'); img.className = 'usp-img';
+    img.src = thumb; img.alt = alt; img.dataset.full = full || thumb;
+    img.addEventListener('click', function () {
+      document.querySelectorAll('.usp-img').forEach(function (x) { x.classList.remove('selected'); });
+      img.classList.add('selected'); _uspSel = img.dataset.full;
+      var ui = document.getElementById('eu-url'); if (ui) ui.value = _uspSel;
+    });
+    grid.appendChild(img);
+  }
+
+  function _uConfirm() {
+    var src = _uspSel || (document.getElementById('eu-url') ? document.getElementById('eu-url').value.trim() : '');
+    if (!src) { alert('请先选择图片或输入 URL'); return; }
+    _gallery.push({ src: src, title: document.getElementById('eu-title').value || '新照片', date: document.getElementById('eu-date').value || '2024', cat: document.getElementById('eu-cat').value || 'daily' });
+    renderGallery(_gallery); closeModal();
+  }
+
+  /* 添加/编辑照片 */
+  function addPhoto() { _curPhotoIdx = -1; _curSrc = ''; showModal(photoForm('添加照片', {})); setTimeout(function(){bindUpload('ep-f','ep-pv');},100); }
+  function editPhoto(idx) {
+    _curPhotoIdx = idx; _curSrc = _gallery[idx] ? _gallery[idx].src : '';
+    showModal(photoForm('编辑照片', _gallery[idx] || {}));
+    setTimeout(function(){bindUpload('ep-f','ep-pv');var pv=document.getElementById('ep-pv');if(pv&&_curSrc){pv.src=_curSrc;pv.style.display='block';}},100);
+  }
+
+  function photoForm(title, item) {
+    return '<h3>' + title + '</h3>' +
+      '<div class="em-field"><label>上传图片文件</label><input type="file" id="ep-f" accept="image/*"/><img id="ep-pv" class="em-preview"/></div>' +
+      '<div class="em-field"><label>或输入图片 URL</label><input type="text" id="ep-u" value="' + (item.src || '') + '" placeholder="https://…"/></div>' +
+      '<div class="em-field"><label>标题</label><input type="text" id="ep-t" value="' + (item.title || '') + '"/></div>' +
+      '<div class="em-field"><label>日期/说明</label><input type="text" id="ep-d" value="' + (item.date || '') + '" placeholder="2024 · 旅行"/></div>' +
+      '<div class="em-field"><label>分类</label><select id="ep-c"><option value="travel"' + (item.cat==='travel'?' selected':'') + '>旅行</option><option value="daily"' + (item.cat==='daily'||!item.cat?' selected':'') + '>日常</option><option value="nature"' + (item.cat==='nature'?' selected':'') + '>自然</option></select></div>' +
+      '<div class="em-actions"><button class="em-btn cancel" onclick="window.SE.closeModal()">取消</button><button class="em-btn" onclick="window.SE.confirmPhoto()">保存</button></div>';
+  }
+
+  function confirmPhoto() {
+    var urlEl = document.getElementById('ep-u');
+    var src = _curSrc || (urlEl ? urlEl.value.trim() : '');
+    if (!src) { alert('请选择图片文件或输入 URL'); return; }
+    var item = { src: src, title: (document.getElementById('ep-t')||{}).value||'', date: (document.getElementById('ep-d')||{}).value||'', cat: (document.getElementById('ep-c')||{}).value||'daily' };
+    if (_curPhotoIdx >= 0) _gallery[_curPhotoIdx] = item; else _gallery.push(item);
+    _curSrc = ''; renderGallery(_gallery); closeModal();
+  }
+
+  function delPhoto(idx) { if (!confirm('确定删除这张照片？')) return; _gallery.splice(idx, 1); renderGallery(_gallery); }
+
+  /* 随笔 */
+  var _curWIdx = -1;
   function loadWritingsData() {
-    var data = loadPageData();
-    if (data.__writings) {
-      try { writingsData = JSON.parse(data.__writings); } catch(e) { writingsData = []; }
-    } else {
-      var items = document.querySelectorAll('.writing-item');
-      writingsData = [];
-      items.forEach(function(item) {
-        var titleEl = item.querySelector('.writing-title');
-        var dateEl = item.querySelector('.writing-date');
-        var tagEl = item.querySelector('.writing-tag');
-        var excerptEl = item.querySelector('.writing-excerpt');
-        writingsData.push({
-          title: titleEl ? titleEl.textContent.trim() : '',
-          date: dateEl ? dateEl.textContent.trim() : '',
-          tag: tagEl ? tagEl.textContent.trim() : '',
-          excerpt: excerptEl ? excerptEl.textContent.trim() : '',
-          body: ''
-        });
+    var d = load();
+    if (d.__writings) { try { _writings = JSON.parse(d.__writings); } catch(e){ _writings=[]; } }
+    else {
+      _writings = [];
+      document.querySelectorAll('.writing-item').forEach(function(el){
+        _writings.push({ title:(el.querySelector('.writing-title')||{textContent:''}).textContent.trim(), date:(el.querySelector('.writing-date')||{textContent:''}).textContent.trim(), tag:(el.querySelector('.writing-tag')||{textContent:''}).textContent.trim(), excerpt:(el.querySelector('.writing-excerpt')||{textContent:''}).textContent.trim(), body:'' });
       });
     }
   }
 
-  function initWritingsEdit() {
-    loadWritingsData();
-    renderWritings(writingsData);
-    addWritingEditButtons();
+  function addWriting() { _curWIdx = -1; showModal(writingForm('新增随笔', {})); }
+  function editWriting(idx) { _curWIdx = idx; showModal(writingForm('编辑随笔', _writings[idx]||{})); }
+
+  function writingForm(title, w) {
+    var body = (w.body||'').replace(/<p>/g,'').replace(/<\/p>/g,'\n').trim();
+    return '<h3>' + title + '</h3>' +
+      '<div class="em-field"><label>标题</label><input type="text" id="ew-t" value="' + (w.title||'') + '"/></div>' +
+      '<div class="em-field"><label>日期</label><input type="text" id="ew-d" value="' + (w.date||'') + '" placeholder="2024 年 12 月 1 日"/></div>' +
+      '<div class="em-field"><label>标签</label><input type="text" id="ew-g" value="' + (w.tag||'') + '" placeholder="日常"/></div>' +
+      '<div class="em-field"><label>摘要</label><textarea id="ew-e">' + (w.excerpt||'') + '</textarea></div>' +
+      '<div class="em-field"><label>正文（每行为一段）</label><textarea id="ew-b" style="min-height:140px">' + body + '</textarea></div>' +
+      '<div class="em-actions"><button class="em-btn cancel" onclick="window.SE.closeModal()">取消</button><button class="em-btn" onclick="window.SE.confirmWriting()">保存</button></div>';
   }
 
-  function addWritingEditButtons() {
-    document.querySelectorAll('.writing-item').forEach(function(item, idx) {
-      var h2 = item.querySelector('.writing-title');
-      if (h2) {
-        var btn = document.createElement('span');
-        btn.className = 'writing-edit-btn';
-        btn.textContent = '编辑';
-        btn.onclick = function() { window.__editor.editWriting(idx); };
-        h2.appendChild(btn);
-      }
-      var delBtn = document.createElement('span');
-      delBtn.className = 'writing-edit-btn';
-      delBtn.style.color = '#b94040';
-      delBtn.textContent = '删除';
-      delBtn.onclick = function() { window.__editor.deleteWriting(idx); };
-      item.appendChild(delBtn);
-    });
+  function confirmWriting() {
+    var t = (document.getElementById('ew-t')||{}).value; if (!t||!t.trim()) { alert('请输入标题'); return; }
+    var body = ((document.getElementById('ew-b')||{}).value||'').split('\n').map(function(l){return l.trim()?'<p>'+l+'</p>':'';}).join('');
+    var item = { title:t.trim(), date:((document.getElementById('ew-d')||{}).value||''), tag:((document.getElementById('ew-g')||{}).value||''), excerpt:((document.getElementById('ew-e')||{}).value||''), body:body };
+    if (_curWIdx >= 0) _writings[_curWIdx] = item; else _writings.unshift(item);
+    renderWritings(_writings); closeModal();
   }
 
-  // ── 9. 模态框 ─────────────────────────────────────────────
-  function createModal(html) {
-    var bg = document.createElement('div');
-    bg.className = 'editor-modal-bg open';
-    bg.innerHTML = '<div class="editor-modal">' + html + '</div>';
-    bg.addEventListener('click', function(e) { if(e.target === bg) closeModal(); });
-    document.body.appendChild(bg);
-    window.__currentModal = bg;
+  function delWriting(idx) { if (!confirm('确定删除？')) return; _writings.splice(idx,1); renderWritings(_writings); }
+
+  /* 保存 */
+  function saveAll() {
+    var d = load();
+    document.querySelectorAll('[data-ed]').forEach(function(el){ if(el.id) d[el.id]=el.innerHTML; });
+    if (document.querySelector('.gallery-grid')) d.__gallery = JSON.stringify(_gallery);
+    if (document.querySelector('.writings-list')) d.__writings = JSON.stringify(_writings);
+    save(d);
+    var btn = document.querySelector('.eb.save');
+    if (btn) { var o=btn.textContent; btn.textContent='✅ 已保存'; setTimeout(function(){btn.textContent=o;},2000); }
   }
 
-  function closeModal() {
-    if (window.__currentModal) {
-      window.__currentModal.remove();
-      window.__currentModal = null;
-    }
-  }
+  /* 全局 */
+  window.SE = { saveAll:saveAll, addPhoto:addPhoto, editPhoto:editPhoto, delPhoto:delPhoto, confirmPhoto:confirmPhoto, unsplashSearch:unsplashSearch, _uSearch:_uSearch, _uConfirm:_uConfirm, addWriting:addWriting, editWriting:editWriting, delWriting:delWriting, confirmWriting:confirmWriting, openArticle:openArticle, closeModal:closeModal };
 
-  // ── 10. 图片上传辅助 ──────────────────────────────────────
-  function readFileAsDataURL(file, cb) {
-    var reader = new FileReader();
-    reader.onload = function(e) { cb(e.target.result); };
-    reader.readAsDataURL(file);
-  }
-
-  function setupImageUpload(inputId, previewId) {
-    var input = document.getElementById(inputId);
-    var preview = document.getElementById(previewId);
-    if (!input || !preview) return;
-    input.addEventListener('change', function() {
-      var file = this.files[0];
-      if (!file) return;
-      readFileAsDataURL(file, function(src) {
-        preview.src = src;
-        preview.style.display = 'block';
-        preview.dataset.src = src;
-      });
-    });
-  }
-
-  // ── 11. 全局编辑器对象 ────────────────────────────────────
-  window.__editor = {
-
-    saveAll: function() {
-      var data = loadPageData();
-
-      // 保存可编辑文字字段
-      document.querySelectorAll('[data-editable]').forEach(function(el) {
-        if (el.id) data[el.id] = el.innerHTML;
-      });
-
-      // 保存相册
-      if (document.querySelector('.gallery-grid')) {
-        data.__gallery = JSON.stringify(galleryItems);
-      }
-
-      // 保存随笔
-      if (document.querySelector('.writings-list')) {
-        data.__writings = JSON.stringify(writingsData);
-      }
-
-      savePageData(data);
-
-      // 保存提示
-      var btn = document.querySelector('.ebar-save');
-      var orig = btn.textContent;
-      btn.textContent = '✅ 已保存';
-      setTimeout(function() { btn.textContent = orig; }, 2000);
-    },
-
-    addGalleryItem: function() {
-      createModal(`
-        <h3>添加照片</h3>
-        <div class="editor-field">
-          <label>上传图片</label>
-          <input type="file" id="em-img-file" accept="image/*">
-          <img id="em-img-preview" class="em-img-preview">
-        </div>
-        <div class="editor-field">
-          <label>标题</label>
-          <input type="text" id="em-img-title" placeholder="照片标题">
-        </div>
-        <div class="editor-field">
-          <label>日期/说明</label>
-          <input type="text" id="em-img-date" placeholder="2024 · 旅行">
-        </div>
-        <div class="editor-field">
-          <label>分类</label>
-          <select id="em-img-cat">
-            <option value="all">全部</option>
-            <option value="travel">旅行</option>
-            <option value="daily">日常</option>
-            <option value="nature">自然</option>
-          </select>
-        </div>
-        <div class="editor-modal-actions">
-          <button class="em-btn cancel" onclick="window.__editor.closeModal()">取消</button>
-          <button class="em-btn" onclick="window.__editor.confirmAddGallery()">添加</button>
-        </div>
-      `);
-      setupImageUpload('em-img-file', 'em-img-preview');
-    },
-
-    confirmAddGallery: function() {
-      var preview = document.getElementById('em-img-preview');
-      var src = preview && preview.dataset.src ? preview.dataset.src : '';
-      if (!src) { alert('请先选择图片'); return; }
-      var item = {
-        src: src,
-        title: document.getElementById('em-img-title').value || '新照片',
-        date: document.getElementById('em-img-date').value || '2024',
-        category: document.getElementById('em-img-cat').value || 'daily',
-        ratio: '1/1'
-      };
-      galleryItems.push(item);
-      renderGallery(galleryItems);
-      addGalleryEditButtons();
-      closeModal();
-    },
-
-    editGalleryItem: function(idx) {
-      var item = galleryItems[idx];
-      createModal(`
-        <h3>编辑照片</h3>
-        <div class="editor-field">
-          <label>替换图片（留空保持原图）</label>
-          <input type="file" id="em-img-file" accept="image/*">
-          <img id="em-img-preview" class="em-img-preview" src="` + (item.src||'') + `" style="` + (item.src?'display:block':'') + `">
-        </div>
-        <div class="editor-field">
-          <label>标题</label>
-          <input type="text" id="em-img-title" value="` + (item.title||'') + `">
-        </div>
-        <div class="editor-field">
-          <label>日期/说明</label>
-          <input type="text" id="em-img-date" value="` + (item.date||'') + `">
-        </div>
-        <div class="editor-field">
-          <label>分类</label>
-          <select id="em-img-cat">
-            <option value="travel" ` + (item.category==='travel'?'selected':'') + `>旅行</option>
-            <option value="daily" ` + (item.category==='daily'?'selected':'') + `>日常</option>
-            <option value="nature" ` + (item.category==='nature'?'selected':'') + `>自然</option>
-          </select>
-        </div>
-        <div class="editor-modal-actions">
-          <button class="em-btn cancel" onclick="window.__editor.closeModal()">取消</button>
-          <button class="em-btn" onclick="window.__editor.confirmEditGallery(` + idx + `)">保存</button>
-        </div>
-      `);
-      setupImageUpload('em-img-file', 'em-img-preview');
-    },
-
-    confirmEditGallery: function(idx) {
-      var preview = document.getElementById('em-img-preview');
-      if (preview && preview.dataset.src) galleryItems[idx].src = preview.dataset.src;
-      galleryItems[idx].title = document.getElementById('em-img-title').value;
-      galleryItems[idx].date = document.getElementById('em-img-date').value;
-      galleryItems[idx].category = document.getElementById('em-img-cat').value;
-      renderGallery(galleryItems);
-      addGalleryEditButtons();
-      closeModal();
-    },
-
-    deleteGalleryItem: function(idx) {
-      if (!confirm('确定删除这张照片？')) return;
-      galleryItems.splice(idx, 1);
-      renderGallery(galleryItems);
-      addGalleryEditButtons();
-    },
-
-    addWriting: function() {
-      createModal(`
-        <h3>新增随笔</h3>
-        <div class="editor-field">
-          <label>标题</label>
-          <input type="text" id="em-w-title" placeholder="随笔标题">
-        </div>
-        <div class="editor-field">
-          <label>日期</label>
-          <input type="text" id="em-w-date" placeholder="2024 年 12 月 1 日">
-        </div>
-        <div class="editor-field">
-          <label>标签</label>
-          <input type="text" id="em-w-tag" placeholder="日常">
-        </div>
-        <div class="editor-field">
-          <label>摘要（列表显示）</label>
-          <textarea id="em-w-excerpt" placeholder="一两句话的摘要…"></textarea>
-        </div>
-        <div class="editor-field">
-          <label>正文（可换行，支持HTML）</label>
-          <textarea id="em-w-body" style="min-height:160px" placeholder="正文内容…"></textarea>
-        </div>
-        <div class="editor-modal-actions">
-          <button class="em-btn cancel" onclick="window.__editor.closeModal()">取消</button>
-          <button class="em-btn" onclick="window.__editor.confirmAddWriting()">添加</button>
-        </div>
-      `);
-    },
-
-    confirmAddWriting: function() {
-      var title = document.getElementById('em-w-title').value;
-      if (!title) { alert('请输入标题'); return; }
-      writingsData.unshift({
-        title: title,
-        date: document.getElementById('em-w-date').value,
-        tag: document.getElementById('em-w-tag').value,
-        excerpt: document.getElementById('em-w-excerpt').value,
-        body: document.getElementById('em-w-body').value.split('\n').map(function(l){ return l.trim() ? '<p>'+l+'</p>' : ''; }).join('')
-      });
-      renderWritings(writingsData);
-      addWritingEditButtons();
-      closeModal();
-    },
-
-    editWriting: function(idx) {
-      var w = writingsData[idx];
-      createModal(`
-        <h3>编辑随笔</h3>
-        <div class="editor-field">
-          <label>标题</label>
-          <input type="text" id="em-w-title" value="` + (w.title||'') + `">
-        </div>
-        <div class="editor-field">
-          <label>日期</label>
-          <input type="text" id="em-w-date" value="` + (w.date||'') + `">
-        </div>
-        <div class="editor-field">
-          <label>标签</label>
-          <input type="text" id="em-w-tag" value="` + (w.tag||'') + `">
-        </div>
-        <div class="editor-field">
-          <label>摘要</label>
-          <textarea id="em-w-excerpt">` + (w.excerpt||'') + `</textarea>
-        </div>
-        <div class="editor-field">
-          <label>正文</label>
-          <textarea id="em-w-body" style="min-height:160px">` + (w.body||'').replace(/<p>/g,'').replace(/<\/p>/g,'\n').trim() + `</textarea>
-        </div>
-        <div class="editor-modal-actions">
-          <button class="em-btn cancel" onclick="window.__editor.closeModal()">取消</button>
-          <button class="em-btn" onclick="window.__editor.confirmEditWriting(` + idx + `)">保存</button>
-        </div>
-      `);
-    },
-
-    confirmEditWriting: function(idx) {
-      writingsData[idx].title = document.getElementById('em-w-title').value;
-      writingsData[idx].date = document.getElementById('em-w-date').value;
-      writingsData[idx].tag = document.getElementById('em-w-tag').value;
-      writingsData[idx].excerpt = document.getElementById('em-w-excerpt').value;
-      writingsData[idx].body = document.getElementById('em-w-body').value
-        .split('\n').map(function(l){ return l.trim() ? '<p>'+l+'</p>' : ''; }).join('');
-      renderWritings(writingsData);
-      addWritingEditButtons();
-      closeModal();
-    },
-
-    deleteWriting: function(idx) {
-      if (!confirm('确定删除这篇随笔？')) return;
-      writingsData.splice(idx, 1);
-      renderWritings(writingsData);
-      addWritingEditButtons();
-    },
-
-    closeModal: closeModal
-  };
-
-  // ── 12. 初始化 ────────────────────────────────────────────
-  document.addEventListener('DOMContentLoaded', function() {
-    restoreContent();
-    if (isLoggedIn()) {
-      injectEditorBar();
-      initEditableFields();
-    }
+  /* 启动 */
+  document.addEventListener('DOMContentLoaded', function () {
+    restore();
+    if (!isIn()) return;
+    injectBar(); initEditable();
+    if (document.querySelector('.gallery-grid')) { loadGallery(); renderGallery(_gallery); }
+    if (document.querySelector('.writings-list')) { loadWritingsData(); renderWritings(_writings); }
   });
+
+  function loadGallery() {
+    var d = load();
+    if (d.__gallery) { try { _gallery = JSON.parse(d.__gallery); } catch(e){ _gallery=[]; } }
+    else { _gallery=[]; document.querySelectorAll('.gallery-item').forEach(function(el){ var img=el.querySelector('img'); var t=el.querySelector('.gallery-item-title'); var dt=el.querySelector('.gallery-item-date'); _gallery.push({src:img?img.src:'',title:t?t.textContent.trim():'',date:dt?dt.textContent.trim():'',cat:el.dataset.category||'daily'}); }); }
+  }
 
 })();
